@@ -22,6 +22,7 @@ from .exceptions import (
     WorksheetNotFound,
 )
 from .http_client import BackOffHTTPClient, HTTPClient
+from .links import CellLink
 from .spreadsheet import Spreadsheet
 from .worksheet import ValueRange, Worksheet
 
@@ -46,6 +47,9 @@ __all__ = [
     # from .http_client
     "BackOffHTTPClient",
     "HTTPClient",
+
+    # from .links
+    "CellLink",
 
     # from .spreadsheet
     "Spreadsheet",

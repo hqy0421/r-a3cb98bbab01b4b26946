@@ -265,6 +265,28 @@ Optionally, pass ``skip_worksheet_titles`` to leave out worksheets you don't nee
    all_values = spreadsheet.get_all_worksheet_values(skip_worksheet_titles=["Sheet1"])
 
 
+Getting All Links From a Range
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use ``get_links()`` to extract every hyperlink and smart-chip link from a
+range. For each link you get the cell address, the text fragment, its
+start/end offsets in the cell text (in UTF-16 code units, as used by the
+Sheets API) and the target URL:
+
+.. code:: python
+
+   for link in worksheet.get_links("A1:C9"):
+       print(link.cell, link.text, link.start, link.end, link.url)
+   # B2 pricing page 8 20 https://example.com/pricing
+   # B2 @ 24 25 https://drive.google.com/file/d/...
+   # C3 click here 0 10 https://example.com
+
+Adjacent text fragments pointing to the same URL are merged into a single
+link. Smart chips are returned one by one (their text is the ``@``
+placeholder they occupy in the cell text) and person chips are skipped.
+Plain text that merely looks like a URL is not considered a link.
+
+
 Loading Worksheet Data into a DataFrame
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

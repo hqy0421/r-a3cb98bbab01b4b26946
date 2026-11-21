@@ -35,6 +35,15 @@ class InvalidInputValue(GSpreadException):
     """The provided values is incorrect."""
 
 
+class InvalidLinkError(GSpreadException):
+    """Invalid link metadata found in a cell.
+
+    Raised when a link offset or a smart chip position reported by the
+    API is not valid for the cell text. The error message names the
+    source cell.
+    """
+
+
 class APIError(GSpreadException):
     """Errors coming from the API itself,
     such as when we attempt to retrieve things that don't exist."""

@@ -30,8 +30,9 @@ from typing import (
 )
 
 from .cell import Cell
-from .exceptions import GSpreadException
+from .exceptions import GSpreadException, InvalidLinkError
 from .http_client import DefaultSerializerType, HTTPClient, ParamsType
+from .links import CELL_LINK_FIELDS, CellLink, extract_cell_links
 from .urls import WORKSHEET_DRIVE_URL
 from .utils import (
     DateTimeOption,
@@ -1104,6 +1105,68 @@ class Worksheet:
         )
 
         return [ValueRange.from_json(x) for x in response["valueRanges"]]
+
+    def get_links(self, range_name: str) -> List[CellLink]:
+        """Returns the links found in the cells of the given range.
+
+        This is a read-only method. For every link it extracts:
+
+        * the A1 address of the cell holding it,
+        * the fragment of text the link is applied to,
+        * the start/end offsets of that fragment in the cell text,
+          in UTF-16 code units (the unit used by the Sheets API, where
+          e.g. an emoji counts for 2 units),
+        * the target URL.
+
+        Text links applied to adjacent fragments and pointing to the same
+        URL are merged into a single entry. Smart chips holding a link are
+        returned individually — each one only covers its ``@`` placeholder
+        in the cell text — and person chips are skipped. When a cell
+        carries no fragment-level link information, a link applied to the
+        whole cell is returned as a fallback. Plain text that merely looks
+        like a URL is not considered a link.
+
+        :param str range_name: Cell range in the A1 notation, e.g. ``"A1:C9"``.
+        :returns: the links found in the range, ordered by row, column
+            then position in the cell text.
+        :rtype: list of :class:`~gspread.links.CellLink`
+        :raises ~gspread.exceptions.InvalidLinkError: if a link offset or
+            a chip position is invalid; the error message names the
+            worksheet and the source cell.
+
+        .. versionadded:: 6.3.0
+
+        Example::
+
+            for link in worksheet.get_links("A1:C9"):
+                print(link.cell, link.text, link.start, link.end, link.url)
+        """
+        params: ParamsType = {
+            "ranges": [absolute_range_name(self.title, range_name)],
+            "fields": CELL_LINK_FIELDS,
+        }
+
+        metadata = self.client.fetch_sheet_metadata(self.spreadsheet_id, params=params)
+
+        links: List[CellLink] = []
+        for sheet in metadata.get("sheets", []):
+            for grid_data in sheet.get("data", []):
+                start_row = grid_data.get("startRow", 0)
+                start_col = grid_data.get("startColumn", 0)
+                for row_offset, row_data in enumerate(grid_data.get("rowData", [])):
+                    for col_offset, cell_data in enumerate(row_data.get("values", [])):
+                        address = rowcol_to_a1(
+                            start_row + row_offset + 1,
+                            start_col + col_offset + 1,
+                        )
+                        try:
+                            links.extend(extract_cell_links(cell_data, address))
+                        except InvalidLinkError as exc:
+                            raise InvalidLinkError(
+                                "worksheet {!r}: {}".format(self.title, exc)
+                            ) from exc
+
+        return links
 
     def update(
         self,

@@ -1,6 +1,13 @@
 Release History
 ===============
 
+6.3.0 (unreleased)
+------------------
+
+* Add read-only ``Worksheet.get_links`` returning the hyperlinks and
+  smart-chip links of a range (source cell, text fragment, UTF-16
+  offsets, target URL) as ``gspread.links.CellLink`` objects
+
 6.2.1 (2025-05-14)
 ------------------
 
